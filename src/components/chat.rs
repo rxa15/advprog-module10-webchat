@@ -92,11 +92,7 @@ impl Component for Chat {
                             .iter()
                             .map(|u| UserProfile {
                                 name: u.into(),
-                                avatar: format!(
-                                    "https://avatars.dicebear.com/api/adventurer-neutral/{}.svg",
-                                    u
-                                )
-                                .into(),
+                                avatar: generate_avatar_for_user(u),
                             })
                             .collect();
                         return true;
@@ -139,66 +135,56 @@ impl Component for Chat {
         let submit = ctx.link().callback(|_| Msg::SubmitMessage);
 
         html! {
-            <div class="flex w-screen">
-                <div class="flex-none w-56 h-screen bg-gray-100">
-                    <div class="text-xl p-3">{"Users"}</div>
-                    {
-                        self.users.clone().iter().map(|u| {
-                            html!{
-                                <div class="flex m-3 bg-white rounded-lg p-2">
-                                    <div>
-                                        <img class="w-12 h-12 rounded-full" src={u.avatar.clone()} alt="avatar"/>
-                                    </div>
-                                    <div class="flex-grow p-3">
-                                        <div class="flex text-xs justify-between">
-                                            <div>{u.name.clone()}</div>
-                                        </div>
-                                        <div class="text-xs text-gray-400">
-                                            {"Hi there!"}
-                                        </div>
-                                    </div>
-                                </div>
-                            }
-                        }).collect::<Html>()
+        <div class="flex min-h-screen w-screen">
+            <aside class="w-64 bg-gray-100 p-4">
+                <h2 class="text-xl font-bold mb-4">{"Users"}</h2>
+                {for self.users.iter().map(|user| {
+                    html!{
+                        <div class="flex items-center bg-white rounded-lg p-2 mb-2 shadow hover:bg-gray-50">
+                            <img class="w-12 h-12 rounded-full" src={user.avatar.clone()} alt={format!("{}'s avatar", user.name)} />
+                            <div class="ml-4">
+                                <p class="text-sm font-medium">{&user.name}</p>
+                                <p class="text-xs text-gray-400">{"Active now"}</p>
+                            </div>
+                        </div>
                     }
-                </div>
-                <div class="grow h-screen flex flex-col">
-                    <div class="w-full h-14 border-b-2 border-gray-300"><div class="text-xl p-3">{"💬 Chat!"}</div></div>
-                    <div class="w-full grow overflow-auto border-b-2 border-gray-300">
-                        {
-                            self.messages.iter().map(|m| {
-                                let user = self.users.iter().find(|u| u.name == m.from).unwrap();
-                                html!{
-                                    <div class="flex items-end w-3/6 bg-gray-100 m-8 rounded-tl-lg rounded-tr-lg rounded-br-lg ">
-                                        <img class="w-8 h-8 rounded-full m-3" src={user.avatar.clone()} alt="avatar"/>
-                                        <div class="p-3">
-                                            <div class="text-sm">
-                                                {m.from.clone()}
-                                            </div>
-                                            <div class="text-xs text-gray-500">
-                                                if m.message.ends_with(".gif") {
-                                                    <img class="mt-3" src={m.message.clone()}/>
-                                                } else {
-                                                    {m.message.clone()}
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                }
-                            }).collect::<Html>()
+                })}
+            </aside>
+            <main class="flex-grow flex flex-col bg-gray-50">
+                <header class="bg-white shadow p-4">
+                    <h1 class="text-xl font-bold">{"💬 Chat"}</h1>
+                </header>
+                <div class="flex-grow overflow-auto p-4">
+                    {for self.messages.iter().map(|message| {
+                        let user = self.users.iter().find(|u| u.name == message.from).unwrap();
+                        html!{
+                            <div class="flex items-end mb-4">
+                                <img class="w-8 h-8 rounded-full mr-3" src={user.avatar.clone()} alt={format!("{}'s avatar", user.name)} />
+                                <div class="flex flex-col bg-white rounded-lg p-3 shadow">
+                                    <span class="text-sm font-medium">{&message.from}</span>
+                                    <span class="text-gray-600 text-xs">
+                                        {if message.message.ends_with(".gif") {
+                                            html! { <img src={message.message.clone()} alt="gif image" /> }
+                                        } else {
+                                            html! { <p>{&message.message}</p> }
+                                        }}
+                                    </span>
+                                </div>
+                            </div>
                         }
-
-                    </div>
-                    <div class="w-full h-14 flex px-3 items-center">
-                        <input ref={self.chat_input.clone()} type="text" placeholder="Message" class="block w-full py-2 pl-4 mx-3 bg-gray-100 rounded-full outline-none focus:text-gray-700" name="message" required=true />
-                        <button onclick={submit} class="p-3 shadow-sm bg-blue-600 w-10 h-10 rounded-full flex justify-center items-center color-white">
-                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="fill-white">
-                                <path d="M0 0h24v24H0z" fill="none"></path><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                            </svg>
-                        </button>
-                    </div>
+                    })}
                 </div>
-            </div>
-        }
+                <footer class="flex items-center p-4 bg-white shadow">
+                    <input ref={self.chat_input.clone()} type="text" placeholder="Type a message..." class="flex-grow rounded-full border-2 border-gray-300 p-2 mr-2 focus:border-blue-500 outline-none" />
+                    <button onclick={submit} class="flex justify-center items-center w-12 h-12 text-white bg-blue-600 rounded-full hover:bg-blue-700 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+                </footer>
+            </main>
+        </div>
     }
+    }
+}
+fn generate_avatar_for_user(user_name: &str) -> String {
+    format!("https://robohash.org/{}.png?set=set4", user_name)
 }
